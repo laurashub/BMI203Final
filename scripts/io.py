@@ -6,14 +6,15 @@ def read_seqs(filename):
 	seqs = []
 
 	#if its a fasta, be careful
-	if filename[:-2] == 'fa':
+	if filename[-2:] == 'fa':
 		with open(filename) as f:
 			seq = ""
 			lines = f.read().splitlines()
 			for line in lines:
-				if '>' in line and seq != "":
-					seqs.append(seq)
-					seq = ""
+				if '>' in line:
+					if seq != "":
+						seqs.append(seq)
+						seq = ""
 				else:
 					seq += line
 			seqs.append(seq)

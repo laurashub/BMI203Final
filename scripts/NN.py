@@ -1,123 +1,115 @@
 import numpy as np
 
 
-class NeuralNetwork:
-
+class NeuralNetwork():
 
     def __init__(self, architecture = [8, 3, 8], activation_funcs = None, 
-    	lr = .05, seed = 1,  error_rate = 0, bias = 1, wd = .00001):
+        lr = .05, seed = 1,  wd = .00001, batch_size = 20, loss = 'MSE'):
 
-    	#set seed
-    	np.random.seed(seed)
+        #set seed
+        np.random.seed(seed)
 
-    	#set hyperparams
-    	self.arch = architecture
-    	self.lr = lr
-    	self.bias = bias
-    	self.wd = wd
+        #set hyperparams
+        self.arch = architecture
+        self.lr = lr
+        self.wd = wd
+        self.bs = batch_size
+        self.lf = loss_funcs[loss]
+        self.dloss = deriv[self.lf]
 
-    	self.params = {}
+        self.params = {}
 
-    	if activation_funcs is None:
-    		self.activation_funcs = []
-    		for l in self.arch[1:]:
-    			self.activation_funcs.append(sigmoid)
-    	else:
-    		self.activation_funcs = activation_funcs
-
-    	#create layers - first is input, not neurons
-    	for i, (layer, func) in enumerate(zip(self.arch[1:], self.activation_funcs)):
-    		"""
-    		Weight matrix dimensions are input_nodes x output_nodes
-    		"""
-    		self.params[i] = {}
-    		self.params[i]['weights'] = np.random.rand(self.arch[i], layer)
-    		self.params[i]['activation'] = func
-    		self.params[i]['dactivation'] = deriv[func]
-
-    def make_weights(self):
-    	return
-    	#beware of symmetry 
+        if activation_funcs is None:
+            activation_funcs = []
+            for i in range(len(self.arch) - 1):
+                activation_funcs.append(sigmoid)
 
 
-    def feedforward(self, input):                          
-    	caches = []                     
-       
-    	for layer, info in self.params.items():
-    		new_input = input
-    		input, z = self.single_forward(new_input, **info)
-    		info['z'] = z #save x for backpropagation
-    		info['a'] = input
+        for i, layer in enumerate(self.arch[1:]):
+            self.params[i] = {}
 
-    	return input
+            self.params[i]['weights'] = np.random.rand(self.arch[i], layer)
+            self.params[i]['activation'] = activation_funcs[i]
+            self.params[i]['gradient'] = deriv[activation_funcs[i]]
 
-    def single_forward(self, input, weights, activation, **kwargs):
-    	z = np.matmul(input, weights)
-    	output = activation(z)
-    	return output, z
 
-    def single_backward(self, layer):
-    	current_layer = self.params[layer]
-    	right_layer = self.params[layer + 1]
+    def feedforward(self, input):
+        '''
+        Feed forward propagation through network
+        '''
+        activation = input
+        for layer in self.params:
+            z = np.dot(activation, self.params[layer]['weights'])
+            self.params[layer]['z'] = z #save hidden layer
+            activation = self.params[layer]['activation'](z)
+            self.params[layer]['a'] = activation #save activation, move onto next level
+        return activation
 
-    	dz = current_layer['dactivation'](current_layer['z'])
-    	return np.multiply(np.matmul(right_layer['delta'], right_layer['weights'].T), dz)
 
-    def backpropagation(self, input, predicted, actual):
+    def backpropagation(self, output, truth, input):
 
-    	#first, calculate the error and the output layer change
-    	error = predicted - actual #change
+        output_layer = self.params[max(self.params)]
 
-    	output_layer = self.params[max(self.params)]
-    	#use error to update output layer
-    	dz = output_layer['dactivation'](output_layer['z'])
-    	output_layer['delta'] = error * dz
+        error = deriv[self.lf](output, truth)
+        output_layer['weight_update'] = error * output_layer['gradient'](output) 
 
-    	#calculate change for all the other layers
-    	for layer in range(max(self.params) - 1, -1, -1):
-    		self.params[layer]['delta'] = self.single_backward(layer)
+        #backpropagation for gradient descent
+        for layer in range(max(self.params) - 1, -1, -1):
+            current_layer = self.params[layer]
+            right_layer = self.params[layer + 1]
 
-    	#update the weights according to calculated delta
-    	a = input
-    	for layer in self.params:
-    		a = np.atleast_2d(a)
-    		ad = np.dot(a.T,self.params[layer]['delta'])
-    		self.params[layer]['weights'] -= self.lr * ad
-    		a = self.params[layer]['a']
+            error = right_layer['weight_update'].dot(right_layer['weights'].T)
+            current_layer['weight_update'] = error * current_layer['gradient'](current_layer['a'])
+ 
+        #update weights based on calculated weight update
+        prev_activate = input
+        for layer in self.params:
+            current_layer = self.params[layer]
 
-    def training_iteration(self, input, truth, iter):
-    	output = self.feedforward(input)
-    	loss = np.sum(output - truth)
-    	print(f"Training {iter}, loss: {loss}")
-    	self.backpropagation(input, output, truth)
+            current_layer['weights'] -= self.lr * prev_activate.T.dot(current_layer['weight_update'])
+            prev_activate = current_layer['a']
 
-    def fit(self):
-    	return
 
     def predict(self, input):
-    	"""
-    	Feed forward, no backprop
-    	"""
-    	return self.feedforward(input)
+        """
+        #Feed forward, no backprop
+        """
+        return self.feedforward(input)
 
-    def compute_loss(self, loss_function):
-    	return
+
+    def training_iteration(self, input, truth, shuffle = True):
+        #concat truth to input
+        full_input = np.concatenate((input, truth), axis = 1 )
+
+        #shuffle input and split by batch size   
+        if shuffle:
+            np.random.shuffle(full_input)
+
+        #is this is larger than the batch size, split up
+        if self.bs < full_input.shape[0]:
+            batches = np.split(full_input, int(full_input.shape[0]/self.bs))
+        else:
+            batches = [full_input]
+
+        #update weights by batch, average loss across all batches
+        total_loss = 0
+        for i, batch in enumerate(batches):
+            batch_input = batch[:,:input.shape[1]]
+            batch_truth = batch[:,input.shape[1]:]
+            output = self.feedforward(batch_input)
+            total_loss += (self.lf(output, batch_truth)).mean()
+            self.backpropagation(output, batch_truth, batch_input)
+        return total_loss/len(batches)
+
 
     def __repr__(self):
-    	str_rep = ""
-    	for layer, info in self.params.items():
-    		str_rep += f"Layer {layer+1}: \n \
-    		{info['weights'].shape[0]} inputs \n \
-    		{info['weights'].shape[1]} outputs\n \
-    		{info['weights']}\n"
-    	return str_rep
-
-    def print_vals(self, kwargs):
-    	for key,val in kwargs.items():
-    		print(key,val)
-
-def activation(x):
-	return
+        str_rep = ""
+        for layer, info in self.params.items():
+            str_rep += f"Layer {layer+1}: \n \
+            {info['weights'].shape[0]} inputs \n \
+            {info['weights'].shape[1]} outputs\n \
+            {info['weights']}\n"
+        return str_rep
 
 #define activation funcs to be used
 def sigmoid(z):
@@ -125,7 +117,15 @@ def sigmoid(z):
     return a
 
 def sigmoid_gradient(x):
-	return sigmoid(x) * (1 - sigmoid(x))
+    return sigmoid(x) * (1 - sigmoid(x))
 
-deriv = {sigmoid : sigmoid_gradient}
-    
+def mse(yhat, y):
+    return ((y - yhat)**2).mean(axis = 1) / 2
+
+def mse_gradient(yhat, y):
+    return yhat - y
+
+deriv = {sigmoid : sigmoid_gradient, mse: mse_gradient}
+loss_funcs = {'MSE':mse}
+
+  

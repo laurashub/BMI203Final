@@ -4,7 +4,10 @@ import numpy as np
 class NeuralNetwork():
 
     def __init__(self, architecture = [8, 3, 8], activation_funcs = None, 
-        lr = .05, seed = 1,  wd = .00001, batch_size = 20, loss = 'MSE'):
+        lr = .05, seed = 1, batch_size = 20, loss = 'MSE'):
+        """
+        Initialize all the nn things
+        """
 
         #set seed
         self.seed = seed
@@ -13,7 +16,6 @@ class NeuralNetwork():
         #set hyperparams
         self.arch = architecture
         self.lr = lr
-        self.wd = wd
         self.bs = batch_size
         self.lf = loss_funcs[loss]
         self.dloss = deriv[self.lf]
@@ -84,6 +86,10 @@ class NeuralNetwork():
 
 
     def training_iteration(self, input, truth, shuffle = True, balance_classes = False, class_members = 2000 ):
+        """
+        Split batches, for each batch run forward and backprop, return loss
+        """
+
         #concat truth to input to keep them together during split/shuffle
         full_input = np.concatenate((input, truth), axis = 1 )
 
@@ -124,6 +130,9 @@ class NeuralNetwork():
         return self.lf(predict, truth)
 
     def clear_weights(self):
+        """
+        Reset weights, useful for retraining the same model
+        """
         #make sure theyre reinitialized to the same
         np.random.seed(self.seed)
         for layer in self.params:
@@ -132,6 +141,9 @@ class NeuralNetwork():
             current_layer['weights'] = np.random.rand(x, y)
 
     def __repr__(self):
+        """
+        String representation
+        """
         str_rep = ""
         for layer, info in self.params.items():
             str_rep += f"Layer {layer+1}: \n \

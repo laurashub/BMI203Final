@@ -1,6 +1,9 @@
 from scripts import NN
 from scripts.__main__ import *
 
+
+# Note: not really using, see __main__.py and write-up
+
 def test_encoder():
 	"""
 	Can my 8 x 3 x 8 autoencoder learn to recreate 8 x 8 identity matrix

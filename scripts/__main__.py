@@ -13,6 +13,9 @@ rc_dir = {'C':'G', 'G':'C', 'A':'T', 'T':'A'}
 
 
 def generate_neg_examples(pos, neg):
+	"""
+	Read negative examples, split into same size as positive
+	"""
 	pos_len = len(pos[0])
 	fixed_neg = set()
 	for neg_ex in neg:
@@ -25,14 +28,19 @@ def generate_neg_examples(pos, neg):
 	return list(fixed_neg)
 
 def training(nn, input, truth, n_epochs, verbose = False, shuffle = True, balance_classes = False, class_members = 2000):
+	"""
+	Train nn on input for n_epochs epochs, returns the loss at the end
+	"""
 	if n_epochs < 10:
 		step = 1
 	else:
 		step = n_epochs / 10
 	prev_loss = float("inf")
 	for epoch in range(n_epochs):
+		#single weight update
 		loss = nn.training_iteration(input, truth, shuffle = shuffle, balance_classes = balance_classes, 
 			class_members = class_members)
+		#potential to end early
 		if loss < 0.001:
 			return loss
 		prev_loss = loss
@@ -42,6 +50,10 @@ def training(nn, input, truth, n_epochs, verbose = False, shuffle = True, balanc
 
 def cross_validation(nn, input, truths, n_epochs, n, batch_size, class_members = 2000, 
 	balance_classes = False, plot = False, title = ""):
+	"""
+	Test hyperparameters by performing cross validation, potentially plot ROC
+	"""
+
 	#concat input and truths
 	all_data = np.concatenate((input, truths), axis = 1)
 
@@ -131,6 +143,10 @@ def generate_rep(seq):
 def classify_sites(lr, n_epochs, architecture, batch_size, class_members, loss_dict = None, 
 	predict_test = False, plot = False):
 
+	"""
+	Run full classification w cross validation
+	"""
+
 	np.random.seed(666)
 	layers = "_".join([str(layer) for layer in architecture])
 	trial_name = f'lr-{lr}_epochs-{n_epochs}_arch-{layers}_bs-{batch_size}_cm-{class_members}'
@@ -156,9 +172,6 @@ def classify_sites(lr, n_epochs, architecture, batch_size, class_members, loss_d
 	training_truth = np.atleast_2d(np.concatenate((np.ones(len(pos_examples)), np.zeros(len(neg_examples))))).T
 
 	#train
-	#best NN from before
-	#my_NN = NN.NeuralNetwork(architecture = [102, 20, 1], lr = 0.1, batch_size = 10)
-
 	#using supplied parameters
 	my_NN = NN.NeuralNetwork(architecture = architecture, lr = lr, batch_size = batch_size)
 
@@ -175,6 +188,7 @@ def classify_sites(lr, n_epochs, architecture, batch_size, class_members, loss_d
 			5, batch_size, class_members = class_members, balance_classes = True, plot = plot, title = trial_name)
 
 		if loss_dict is None:
+			#Train and print out a few example classifications
 
 			my_NN = NN.NeuralNetwork(architecture = architecture, lr = lr, batch_size = batch_size)
 			#nn, input, truth, n_epochs, verbose = False, shuffle = True, balance_classes = False, class_members = 2000)
@@ -192,11 +206,15 @@ def classify_sites(lr, n_epochs, architecture, batch_size, class_members, loss_d
 				print(x, y)
 
 		else:
+			#update loss_dict
 			loss_dict[trial_name] = valid_loss
 		print(trial_name, valid_loss)
 	
 
 def rank_tests(nn):
+	"""
+	Use nn to classify all sequences in test set
+	"""
 	test_seqs = io.read_seqs('data/rap1-lieb-test.txt')
 
 	test_set = np.concatenate([generate_rep(x) for x in test_seqs])
@@ -230,6 +248,9 @@ def autoencoder(plot = True):
 		plt.savefig('id_matrix_reconstruction.png', dpi=200)
 
 def test_hyperparams():
+	"""
+	Train multiple models with differect hyperparameters
+	"""
 	loss_dict = {}
 
 	#naive combinatorial search
@@ -250,6 +271,9 @@ def test_hyperparams():
 		f.write(str(loss_dict))
 
 def run_best_model():
+	"""
+	Using best model from loss_dict, run CV to generate ROC plot, train on all data, classify test seqs
+	"""
 	loss_dict = eval(open('loss_dict.txt', 'r').read())
 	print(loss_dict)
 
@@ -282,7 +306,7 @@ def run_best_model():
 #make results consistent
 np.random.seed(27)
 #autoencoder()
-#classify_sites()
+
 #test_hyperparams()
 run_best_model()
 

@@ -1,36 +1,17 @@
-[![Build
-Status](https://travis-ci.org/miriam-goldman/Final_Project_Skeleton.svg?branch=master)](https://travis-ci.org/miriam-goldman/Final_Project_Skeleton)
 
-Example python project with testing.
+# BMI 203 Final Project
 
-## usage
 
-To use the package, first make a new conda environment and activate it
+NN.py - neural net with flexible number of layers, neurons. Takes architecture, learning rate, batch size, loss as input
+	* feedforward - run input forward to generate output
+	* backpropagation - use difference between expected and truth to update weights
+	* predict - feedforward only
+	* training iteration - split training into batches, update weights by each batch, return average loss
+	* score prediction - use loss function to evaluate prediction against truth
+	* clear weights - reset all weights without reinitializing neural net
+	* also includes utility functions for activation and backprop
 
-```
-conda create -n exampleenv python=3
-source activate exampleenv
-```
-
-then run
-
-```
-conda install --yes --file requirements.txt
-```
-
-to install all the dependencies in `requirements.txt`. Then the package's
-main function (located in `example/__main__.py`) can be run as follows
-
-```
-python -m scripts
-```
-
-## testing
-
-Testing is as simple as running
-
-```
-python -m pytest
-```
-
-from the root directory of this project.
+main.py - run everything 
+	* autoencoder - creates 8x3x8 autoencoder and tests reconstruction of identity matrix
+	* test_hyperparms - runs and evaluates model for set of various hyperparameters
+	* run_best_model - create ROC plot, train and run on test set using best hyperparams

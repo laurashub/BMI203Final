@@ -220,7 +220,7 @@ def rank_tests(nn):
 	test_set = np.concatenate([generate_rep(x) for x in test_seqs])
 	predicted = nn.predict(test_set)
 
-	with open('shub_prediction.tsv', 'wt') as f:
+	with open('shub_predictions.tsv', 'wt') as f:
 		tsv_writer = csv.writer(f, delimiter='\t')
 		for seq, prediction in zip(test_seqs, predicted):
 			tsv_writer.writerow([seq, prediction.item(0)])
